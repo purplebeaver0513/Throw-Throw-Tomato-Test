@@ -1,0 +1,280 @@
+
+:root {
+  --bg: #d4f1c5;
+  --sky: #a0e0ff;
+  --ui: #1f2937;
+  --btn: #ff5555;
+  --btn-text: #fff;
+  --panel: rgba(255,255,255,0.95);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  font-family: 'Nunito', sans-serif;
+}
+
+/* Make the whole app fill the viewport */
+.game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;                 /* center the canvas */
+  align-items: center;
+  justify-content: center;
+}
+
+/* Ensure overlays stretch over the entire screen area */
+.overlay {
+  position: absolute;
+  inset: 0;
+}
+
+/* Let the main menu carry its own background */
+#mainMenu {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+
+/* Canvas */
+#gameCanvas {
+  background: var(--sky);
+  border: 5px solid #fff;
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  display: block;
+}
+
+/* HUD */
+#ui {
+  position: absolute;
+  top: 52px; /* leave room for top buttons */
+  left: 20px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  z-index: 10;
+  user-select: none;
+}
+#timer, #score {
+  background: rgba(255,255,255,0.9);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  color: var(--ui);
+}
+#pauseBtn {
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: none;
+  background: #fff;
+  font-weight: 800;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  cursor: pointer;
+}
+
+/* Top buttons */
+#topButtons {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  gap: 8px;
+  z-index: 50;
+}
+#topButtons button {
+  padding: 6px 10px;
+  font-size: 14px;
+  font-weight: bold;
+  border: none;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+
+/* Countdown overlay */
+#countdown {
+  position: absolute;
+  top: 18%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 64px;
+  font-weight: 800;
+  display: none;
+  z-index: 20;
+  text-shadow: 0 4px 20px rgba(0,0,0,0.25);
+  color: #1f2937;
+}
+
+/* (Legacy) Final Score number */
+#finalScore {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 64px;
+  font-weight: 800;
+  color: #1f2937;
+  background: rgba(255,255,255,0.9);
+  padding: 20px 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.15);
+  display: none;
+  z-index: 15;
+}
+
+/* Overlays / Menus */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  z-index: 30;
+  background: none;
+}
+.center-stack {
+  display: none;
+}
+.center-stack.active,
+.overlay.active {
+  display: flex;
+}
+.center-stack {
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+}
+.center-stack > * {
+  background: var(--panel);
+  padding: 14px 20px;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+/* Buttons */
+button {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+button.primary {
+  background: var(--btn);
+  color: var(--btn-text);
+}
+.row {
+  display: flex;
+  gap: 12px;
+}
+
+/* Score list */
+.score-list {
+  width: 520px;
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 16px 24px;
+  list-style: decimal;
+  font-weight: 800;
+  color: var(--ui);
+}
+.score-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px solid #eee;
+}
+
+/* Name entry */
+#nameEntry input {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 2px solid #eee;
+  width: 260px;
+  font-weight: 800;
+}
+.big-score {
+  font-size: 28px;
+  font-weight: 900;
+  text-align: center;
+}
+
+/* Overlay panels (Settings / Update Log) */
+.overlay-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,0.95);
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+  display: none;
+  z-index: 100;
+  width: 320px;
+  max-width: 90%;
+}
+.overlay-panel h2 { margin-top: 0; }
+.overlay-panel label { display: block; margin: 10px 0; }
+.overlay-panel input[type="range"] { width: 100%; }
+.overlay-panel button {
+  margin-top: 10px;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 8px;
+  background: #ff5555;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Update log content scrollable */
+#updateLogContent {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px;
+  border: 1px solid #ccc;
+  background: #fafafa;
+  margin-bottom: 10px;
+}
+
+/* Version label bottom-left */
+#versionLabel {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  font-weight: bold;
+  font-size: 14px;
+  color: rgba(0,0,0,0.7);
+  z-index: 40;
+}
+
+/* Hide HUD when not in game */
+.hide { display: none !important; }
+
+/* Force exact on-screen size */
+#gameCanvas {
+  width: 1800px;   /* CSS pixels on screen */
+  height: 600px;   /* CSS pixels on screen */
+}
+
+/* Make sure nothing is shrinking it */
+.game-container { transform: none; }
+
+/* Title image on main menu */
+#titleLogo {
+  width: min(820px, 80vw);
+  height: auto;
+  display: block;
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+}
+
+
