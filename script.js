@@ -1,780 +1,243 @@
-"use strict";
+/* ===== Reset & Base ===== */
+* { margin: 0; padding: 0; box-sizing: border-box; }
 
-/*************************
- * Throw Throw Tomato JS *
- *************************/
-
-/** ============================
- * ASSETS
- * ============================ */
-const ASSETS = {
-  menuFullBg: "https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025560.png",
-  gameBg:     "https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025608.png",
-  tomato:     "https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/file_000000006e5061fd92760a84f59a4fa3__1_-removebg-preview.png",
-  tomatoSplat:"https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/file_00000000c84c6230b19da260b17746ed__1_-removebg-preview.png",
-  farmerAngry:"https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/file_000000009a4c61f7b258eabae653aec9-removebg-preview.png",
-  targetYellow:"https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025399-removebg-preview.png",
-  targetOrange:"https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025398-removebg-preview.png",
-  targetRed:   "https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025397-removebg-preview.png",
-};
-
-/** ============================
- * IMAGE PRELOAD (tolerant)
- * ============================ */
-let IMGS = null;
-function loadImages(manifest) {
-  const entries = Object.entries(manifest);
-  const images = {};
-  let done = 0;
-  return new Promise((resolve) => {
-    const finish = () => { if (++done === entries.length) resolve(images); };
-    for (const [key, url] of entries) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = () => { images[key] = img; finish(); };
-      img.onerror = () => { console.warn("[TTT] Failed to load:", url); finish(); };
-      img.src = url;
-    }
-  });
+body {
+  font-family: 'Nunito', system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background: #000;
+  overflow: hidden;
 }
 
-/**************
- * DOM HOOKS *
- **************/
-const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+/* Full-viewport container + centered canvas */
+.game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
 
-const timerDisplay = document.getElementById('timer');
-const scoreDisplay = document.getElementById('score');
-const pauseBtn = document.getElementById('pauseBtn');
-const exitBtn = document.getElementById('exitBtn');
-const countdownDiv = document.getElementById('countdown');
-
-const mainMenu = document.getElementById('mainMenu');
-const playBtn = document.getElementById('playBtn');
-const openScoresBtn = document.getElementById('openScoresBtn');
-
-const highscoresScreen = document.getElementById('highscoresScreen');
-const scoresTitle = document.getElementById('scoresTitle');
-const scoresList = document.getElementById('scoresList');
-const showAllTimeBtn = document.getElementById('showAllTimeBtn');
-const scoresToMenuBtn = document.getElementById('scoresToMenuBtn');
-
-const nameEntry = document.getElementById('nameEntry');
-const finalScoreValue = document.getElementById('finalScoreValue');
-const playerNameInput = document.getElementById('playerName');
-const saveScoreBtn = document.getElementById('saveScoreBtn');
-const cancelSaveBtn = document.getElementById('cancelSaveBtn');
-
-const toMenuOverlay = document.getElementById('toMenuOverlay');
-const toMenuBtn = document.getElementById('toMenuBtn');
-const finalScoreValue2 = document.getElementById('finalScoreValue2');
-
-const settingsBtn = document.getElementById('settingsBtn');
-const updateLogBtn = document.getElementById('updateLogBtn');
-const settingsPanel = document.getElementById('settingsPanel');
-const updateLogPanel = document.getElementById('updateLogPanel');
-const closeSettings = document.getElementById('closeSettings');
-const closeUpdateLog = document.getElementById('closeUpdateLog');
-const closeSettingsX = document.getElementById('closeSettingsX');
-const closeUpdateLogX = document.getElementById('closeUpdateLogX');
-const musicVolumeSlider = document.getElementById('musicVolume');
-const sfxVolumeSlider = document.getElementById('sfxVolume');
-
-/************************
- * CANVAS SIZE (exact) *
- ************************/
-const LOGICAL_W = 1800;   // internal logical size 3:1
-const LOGICAL_H = 600;
-function setExactCanvasSize() {
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = Math.round(LOGICAL_W * dpr);
-  canvas.height = Math.round(LOGICAL_H * dpr);
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.imageSmoothingEnabled = true;
-}
-setExactCanvasSize();
-window.addEventListener('resize', setExactCanvasSize);
-
-/**********************************
- * MENU BACKGROUND (no center logo)
- **********************************/
-function applyMenuBackground() {
-  if (!mainMenu) return;
-  mainMenu.style.backgroundImage = `url('${ASSETS.menuFullBg}')`;
-  mainMenu.style.backgroundSize = 'cover';
-  mainMenu.style.backgroundRepeat = 'no-repeat';
-  mainMenu.style.backgroundPosition = 'center center';
-}
-function clearMenuBackground() {
-  if (!mainMenu) return;
-  mainMenu.style.backgroundImage = '';
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-/**************
- * GAME STATE *
- **************/
-let score = 0;
-let timeLeft = 20;
-let cooldown = false;
-let isGameOver = false;
-let isGameStarted = false;
-let isPaused = false;
-
-let targets = [];
-let tomatoes = [];
-let popups = [];
-let splats = [];
-
-let inBonusRound = false;
-let bonusFarmer = null;
-let showBonusPrompt = false;
-
-let animId = null;        // RAF loop
-let gameInterval = null;  // 1s tick
-let countdownActive = false;
-let countdownTimerId = null;
-
-let musicVolume = 1.0;
-let sfxVolume = 1.0;
-let pendingScore = 0;
-let pendingDestinations = { today: false, alltime: false };
-
-let comboCount = 0;
-let bestStreak = 0;
-let lastHitTime = 0;
-const COMBO_TIMEOUT = 1750;
-
-/********************
- * HELPERS & SPAWN *
- ********************/
-function randomInt(min, max) { return Math.floor(Math.random() * (max - min) + min); }
-const SPAWN_BAND_LEFT_RATIO = 0.30;
-const SPAWN_BAND_WIDTH_RATIO = 0.40;
-const SPAWN_AREA_X = () => (canvas.width / (window.devicePixelRatio || 1)) * SPAWN_BAND_LEFT_RATIO;
-const SPAWN_AREA_W = () => (canvas.width / (window.devicePixelRatio || 1)) * SPAWN_BAND_WIDTH_RATIO;
-const SPAWN_PAD = 40;
-function buildMiddleLanes(count = 5) {
-  const left = SPAWN_AREA_X() + SPAWN_PAD;
-  const right = SPAWN_AREA_X() + SPAWN_AREA_W() - SPAWN_PAD;
-  if (count <= 1) return [Math.floor((left + right) / 2)];
-  const step = (right - left) / (count - 1);
-  return Array.from({ length: count }, (_, i) => Math.floor(left + i * step));
+/* 3:1 aspect, slightly shorter to avoid vertical stretch feel */
+#gameCanvas {
+  display: block;
+  background: #87CEEB;                         /* fallback while assets load */
+  aspect-ratio: 3 / 1;
+  width: min(100vw, calc(100vh * 3));
+  height: auto;
+  max-height: 90vh;
+  max-width: 100vw;
 }
 
-/****************
- * POPUPS / FX *
- ****************/
-class Popup {
-  constructor(x, y, text, color = '#111') {
-    this.x = x; this.y = y;
-    this.text = text; this.color = color;
-    this.alpha = 1; this.dy = -1.2; this.life = 60;
-    this.size = 28; this.bold = true;
-  }
-  update() { this.y += this.dy; this.life--; this.alpha = Math.max(0, this.life / 60); }
-  draw() {
-    ctx.save();
-    ctx.globalAlpha = this.alpha;
-    ctx.font = `${this.bold ? '800 ' : ''}${this.size}px Nunito, sans-serif`;
-    ctx.fillStyle = this.color;
-    ctx.textAlign = 'center';
-    ctx.fillText(this.text, this.x, this.y);
-    ctx.restore();
-  }
-  get dead() { return this.life <= 0; }
+/* ===== HUD ===== */
+#ui {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  color: white;
+  font-weight: 800;
 }
-class Splat {
-  constructor(x, y, imgKey = 'tomatoSplat', life = 42, scale = 1.1) {
-    this.x = x; this.y = y; this.imgKey = imgKey;
-    this.life = life; this.max = life; this.scale = scale;
-  }
-  update() { this.life--; }
-  draw() {
-    const alpha = Math.max(0, this.life / this.max);
-    const img = IMGS && IMGS[this.imgKey];
-    if (!img) return;
-    const base = 90 * this.scale;
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.drawImage(img, this.x - base/2, this.y - base/2, base, base);
-    ctx.restore();
-  }
-  get dead() { return this.life <= 0; }
+#ui.hide { display: none; }
+#ui div {
+  margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 8px 12px;
+  border-radius: 6px;
 }
+#hudControls { margin-top: 8px; display: flex; gap: 8px; justify-content: flex-end; }
 
-/****************
- * PROJECTILES *
- ****************/
-class Tomato {
-  constructor(targetX, targetY) {
-    this.x = LOGICAL_W / 2;
-    this.y = LOGICAL_H - 40;
-    this.targetX = targetX; this.targetY = targetY;
-    this.radius = 10; this.speed = 18;
-  }
-  update() {
-    const dx = this.targetX - this.x, dy = this.targetY - this.y;
-    const dist = Math.hypot(dx, dy);
-    if (dist > this.speed) { this.x += (dx / dist) * this.speed; this.y += (dy / dist) * this.speed; }
-    else { this.hit(); }
-  }
-  hit() {
-    let awarded = false;
+#pauseBtn, #exitBtn {
+  padding: 8px 16px;
+  background: #ff6b6b;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 900;
+}
+#pauseBtn[disabled], #exitBtn[disabled] { opacity: 0.6; cursor: not-allowed; }
 
-    // regular targets
-    for (let i = targets.length - 1; i >= 0; i--) {
-      const t = targets[i];
-      if (t && Math.hypot(this.x - t.x, this.y - t.y) < t.radius + this.radius) {
-        const pts = applyComboAndReturnPoints(t.points, t.x, t.y - 10);
-        score += pts;
-        scoreDisplay.innerText = `Score: ${score.toLocaleString()}`;
-        popups.push(new Popup(t.x, t.y - 10, `+${pts}`, '#111'));
-        splats.push(new Splat(t.x, t.y - 6, 'tomatoSplat', 44, 1.0));
-        targets.splice(i, 1);
-        awarded = true;
-        break;
-      }
-    }
-
-    // farmer
-    if (!awarded && inBonusRound && bonusFarmer) {
-      const hb = bonusFarmer.hitbox, fb = bonusFarmer.bodyBox;
-      const onHead = (this.x > hb.x && this.x < hb.x + hb.width && this.y > hb.y && this.y < hb.y + hb.height);
-      const onBody = (this.x > fb.x && this.x < fb.x + fb.width && this.y > fb.y && this.y < fb.y + fb.height);
-
-      if (onHead) {
-        if (!bonusFarmer.headHits) {
-          const pts = applyComboAndReturnPoints(100, hb.x + hb.width/2, hb.y - 8);
-          score += pts;
-          popups.push(new Popup(hb.x + hb.width/2, hb.y - 8, `+${pts}`, '#e11d48'));
-        } else {
-          score = Math.floor(score * 2);
-          popups.push(new Popup(hb.x + hb.width/2, hb.y - 8, 'x2!', '#e11d48'));
-          bumpCombo(hb.x + hb.width/2, hb.y - 26, true);
-        }
-        splats.push(new Splat(hb.x + hb.width/2, hb.y, 'tomatoSplat', 44, 1.2));
-        bonusFarmer.headHits = (bonusFarmer.headHits || 0) + 1;
-        scoreDisplay.innerText = `Score: ${score.toLocaleString()}`;
-        awarded = true;
-      } else if (onBody) {
-        if (!bonusFarmer.bodyHits) {
-          const pts = applyComboAndReturnPoints(50, fb.x + fb.width/2, fb.y + fb.height/2);
-          score += pts;
-          popups.push(new Popup(fb.x + fb.width/2, fb.y + fb.height/2, `+${pts}`, '#1d4ed8'));
-        } else {
-          score = Math.floor(score * 1.5);
-          popups.push(new Popup(fb.x + fb.width/2, fb.y + fb.height/2, 'x1.5!', '#1d4ed8'));
-          bumpCombo(fb.x + fb.width/2, fb.y + fb.height/2 - 18, true);
-        }
-        splats.push(new Splat(fb.x + fb.width/2, fb.y + fb.height/2, 'tomatoSplat', 40, 1.1));
-        bonusFarmer.bodyHits = (bonusFarmer.bodyHits || 0) + 1;
-        scoreDisplay.innerText = `Score: ${score.toLocaleString()}`;
-        awarded = true;
-      }
-    }
-
-    const idx = tomatoes.indexOf(this);
-    if (idx !== -1) tomatoes.splice(idx, 1);
-  }
-  draw() {
-    if (IMGS && IMGS.tomato) {
-      const size = 28;
-      ctx.drawImage(IMGS.tomato, this.x - size/2, this.y - size/2, size, size);
-    } else {
-      ctx.beginPath(); ctx.fillStyle = 'tomato';
-      ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-    }
-  }
+/* ===== Always-visible title buttons ===== */
+#topButtons {
+  position: absolute;
+  top: 20px; left: 20px;
+  z-index: 1100;
+}
+#topButtons button {
+  margin-right: 10px;
+  padding: 10px 12px;
+  font-size: 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 2px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 900;
 }
 
-/***********
- * TARGETS *
- ***********/
-class Target {
-  constructor(tier = 1) {
-    this.radius = 30;
-    this.tier = tier;
-    this.points = tier === 1 ? 10 : tier === 2 ? 20 : 50;
-    this.speedX = tier === 1 ? 0 : (tier === 2 ? 1.2 : 2.1);
+/* ===== Overlays ===== */
+.overlay {
+  position: absolute;
+  inset: 0;
+  display: none;
+  z-index: 900;
 
-    const leftInside = SPAWN_AREA_X() + SPAWN_PAD + this.radius;
-
-    if (tier === 1) {
-      const lanes = buildMiddleLanes(5);
-      this.x = lanes[randomInt(0, lanes.length)];
-      this.y = 320;
-    } else if (tier === 2) {
-      this.x = leftInside; this.y = 220;
-    } else {
-      this.x = leftInside; this.y = 120;
-    }
-
-    this.leftBound = SPAWN_AREA_X() + SPAWN_PAD - this.radius;
-    this.rightBound = SPAWN_AREA_X() + SPAWN_AREA_W() - SPAWN_PAD + this.radius;
-  }
-  update() {
-    if (this.speedX !== 0) {
-      this.x += this.speedX;
-      if (this.x > this.rightBound) this.x = this.leftBound;
-      if (this.x < this.leftBound) this.x = this.rightBound;
-    }
-  }
-  draw() {
-    const size = this.radius * 2.8;
-    let img = null;
-    if (IMGS) img = this.tier === 1 ? IMGS.targetYellow : (this.tier === 2 ? IMGS.targetOrange : IMGS.targetRed);
-    if (img) ctx.drawImage(img, this.x - size/2, this.y - size/2, size, size);
-    else { ctx.beginPath(); ctx.fillStyle='gray'; ctx.arc(this.x,this.y,this.radius,0,Math.PI*2); ctx.fill(); }
-  }
+  /* Base layer color; we’ll add the image on top via JS inline styles */
+  background: rgba(0, 0, 0, 0.88);
+  background-blend-mode: multiply;
+}
+.overlay.active { display: flex; }
+.center-stack {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
 }
 
-/***********
- * FARMER *
- ***********/
-class Farmer {
-  constructor() {
-    const bandLeft = SPAWN_AREA_X();
-    const bandRight = SPAWN_AREA_X() + SPAWN_AREA_W();
-    this.width = 140; this.height = 140;
-    this.x = bandLeft - this.width - 40;
-    this.y = 180;
-
-    this.t = 0;
-    this.phase = 'enter';
-    this.phaseTimer = 0;
-
-    this.hitbox = { x: this.x + this.width * 0.33, y: this.y + 6, width: this.width * 0.34, height: 24 };
-    this.bodyBox = { x: this.x + this.width * 0.08, y: this.y + 28, width: this.width * 0.84, height: this.height - 36 };
-
-    const bandWidth = bandRight - bandLeft;
-    const framesForTenSec = 10 * 60;
-    this.enterSpeedX = bandWidth / framesForTenSec;
-
-    this.poseX = bandLeft + bandWidth * 0.55 - this.width / 2;
-    this.poseY = this.y;
-
-    this.active = false;
-  }
-  update() {
-    this.hitbox.x = this.x + this.width * 0.33; this.hitbox.y = this.y + 6;
-    this.bodyBox.x = this.x + this.width * 0.08; this.bodyBox.y = this.y + 28;
-
-    if (!this.active) return;
-
-    this.t++; this.phaseTimer++;
-    const bob = Math.sin(this.t * 0.25) * 2;
-
-    if (this.phase === 'enter') {
-      this.x += this.enterSpeedX * 1.1;
-      this.y = 180 + bob;
-      if (this.x >= this.poseX) { this.x = this.poseX; this.phase = 'pose'; this.phaseTimer = 0; }
-    } else if (this.phase === 'pose') {
-      this.y = this.poseY + Math.sin(this.t * 0.15) * 1.0;
-      if (this.phaseTimer > 180) { this.phase = 'exit'; this.phaseTimer = 0; }
-    } else if (this.phase === 'exit') {
-      this.y += 1.6; this.x += 0.4;
-      if (this.y > LOGICAL_H + 40) endBonusRound();
-    }
-  }
-  draw() {
-    if (IMGS && IMGS.farmerAngry) ctx.drawImage(IMGS.farmerAngry, this.x, this.y, this.width, this.height);
-    else { ctx.fillStyle='brown'; ctx.fillRect(this.x,this.y,this.width,this.height); }
-  }
+/* Move menu buttons further down (responsive) */
+#mainMenu .menu-stack {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: clamp(4vh, 8vh, 12vh); /* lower = further from center (more down) */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }
 
-/************************
- * COMBO / STREAK LOGIC *
- ************************/
-function getComboMultiplier() { return comboCount < 5 ? 1 : 1 + 0.012 * (comboCount - 4); }
-function bumpCombo(px, py, showPopupIfNeeded = true) {
-  const now = performance.now();
-  if (now - lastHitTime <= COMBO_TIMEOUT) comboCount += 1; else comboCount = 1;
-  lastHitTime = now;
-  if (showPopupIfNeeded && comboCount >= 5) popups.push(new Popup(px, py, `COMBO x${comboCount}`, '#7c3aed'));
+/* Buttons (generic) */
+button {
+  padding: 12px 24px;
+  margin: 6px;
+  font-size: 16px;
+  font-weight: 900;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.15s;
 }
-function applyComboAndReturnPoints(basePoints, px, py) {
-  bumpCombo(px, py - 18, true);
-  return Math.floor(basePoints * getComboMultiplier());
-}
-
-/*********************
- * BACKGROUND & HUD *
- *********************/
-function drawBackground() {
-  ctx.fillStyle = '#a0e0ff';
-  ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
-
-  const img = IMGS && IMGS.gameBg;
-  if (!img) return;
-
-  // cover without distortion
-  const canvasW = LOGICAL_W, canvasH = LOGICAL_H;
-  const imgW = img.width, imgH = img.height;
-  const canvasAR = canvasW / canvasH, imgAR = imgW / imgH;
-
-  let srcW, srcH, srcX, srcY;
-  if (imgAR > canvasAR) {
-    srcH = imgH; srcW = Math.floor(imgH * canvasAR);
-    srcX = Math.floor((imgW - srcW) / 2); srcY = 0;
-  } else {
-    srcW = imgW; srcH = Math.floor(imgW / canvasAR);
-    srcX = 0; srcY = Math.floor((imgH - srcH) / 2);
-  }
-  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, canvasW, canvasH);
-}
-function drawLauncher() { ctx.fillStyle = '#7b3f00'; ctx.fillRect(LOGICAL_W/2 - 12, LOGICAL_H - 30, 24, 24); }
-function drawComboBar() {
-  if (comboCount <= 0) return;
-  const now = performance.now(), elapsed = now - lastHitTime, remain = Math.max(0, COMBO_TIMEOUT - elapsed);
-  const pct = Math.max(0, Math.min(1, remain / COMBO_TIMEOUT));
-  const x = LOGICAL_W / 2 - 260, y = 14, w = 520, h = 18;
-
-  ctx.fillStyle = 'rgba(0,0,0,0.15)'; ctx.fillRect(x,y,w,h);
-  ctx.fillStyle = comboCount >= 5 ? '#f59e0b' : '#3b82f6'; ctx.fillRect(x,y,w*pct,h);
-
-  ctx.font = '700 16px Nunito, sans-serif'; ctx.fillStyle = '#111827'; ctx.textAlign = 'center';
-  if (comboCount >= 5) {
-    const extra = Math.round((getComboMultiplier() - 1) * 1000) / 10;
-    ctx.fillText(`Combo x${comboCount} (+${extra}%)`, x + w/2, y + h - 3);
-  } else {
-    ctx.fillText(`Combo x${comboCount}`, x + w/2, y + h - 3);
-  }
-
-  if (elapsed > COMBO_TIMEOUT) comboCount = 0;
+button:hover { transform: translateY(-2px); }
+.primary { background: #ff6b6b; color: white; }
+button:not(.primary) {
+  background: rgba(255, 255, 255, 0.12);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-/*********************
- * RENDER & GAME LOOP
- *********************/
-function update() {
-  if (!isGameStarted) return;
-
-  ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
-  drawBackground();
-
-  // visual spawn band
-  const bandX = SPAWN_AREA_X(), bandW = SPAWN_AREA_W();
-  ctx.fillStyle = 'rgba(0, 255, 0, 0.10)'; ctx.fillRect(bandX, 0, bandW, LOGICAL_H);
-  ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
-  ctx.fillRect(bandX, 0, SPAWN_PAD, LOGICAL_H);
-  ctx.fillRect(bandX + bandW - SPAWN_PAD, 0, SPAWN_PAD, LOGICAL_H);
-
-  if (!isPaused) {
-    if (inBonusRound && bonusFarmer) {
-      bonusFarmer.update();
-    } else {
-      for (let i = 0; i < targets.length; i++) {
-        const t = targets[i];
-        if (!t || typeof t.update !== 'function' || typeof t.draw !== 'function') { targets.splice(i, 1); i--; continue; }
-        t.update();
-      }
-    }
-    for (const tm of tomatoes) tm.update();
-    for (let i = popups.length - 1; i >= 0; i--) { popups[i].update(); if (popups[i].dead) popups.splice(i,1); }
-    for (let i = splats.length - 1; i >= 0; i--) { splats[i].update(); if (splats[i].dead) splats.splice(i,1); }
-  }
-
-  if (inBonusRound && bonusFarmer) {
-    bonusFarmer.draw();
-    if (showBonusPrompt) {
-      ctx.save(); ctx.font = '900 64px Nunito, sans-serif'; ctx.fillStyle = '#1f2937'; ctx.textAlign = 'center';
-      ctx.fillText('SHOOT THE FARMER', LOGICAL_W / 2, LOGICAL_H / 2 - 40);
-      ctx.restore();
-    }
-  } else {
-    for (const t of targets) t.draw();
-  }
-  for (const tm of tomatoes) tm.draw();
-  for (const s of splats) s.draw();
-  for (const p of popups) p.draw();
-
-  drawComboBar();
-  drawLauncher();
-
-  if (isPaused) {
-    ctx.save();
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(0, 0, LOGICAL_W, LOGICAL_H);
-    ctx.font = '900 64px Nunito, sans-serif';
-    ctx.fillStyle = '#fff';
-    ctx.textAlign = 'center';
-    ctx.fillText('PAUSED', LOGICAL_W / 2, LOGICAL_H / 2 - 10);
-    ctx.restore();
-  }
-
-  animId = requestAnimationFrame(update);
+/* ===== Overlay Panels (Settings / Update Log) ===== */
+.overlay-panel {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: #fff;
+  color: #000;
+  padding: 0;                                   /* pad inside sections */
+  border-radius: 14px;
+  z-index: 1300;
+  max-height: 80vh;                             /* overall cap */
+  width: min(92vw, 560px);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.45);
+  display: none;                                 /* JS toggles to flex */
+  flex-direction: column;
 }
 
-/*****************
- * GAME LIFECYCLE
- *****************/
-function startGame() {
-  settingsPanel.style.display = 'none';
-  updateLogPanel.style.display = 'none';
-  clearMenuBackground();
-
-  cleanupGameLoops();
-
-  setExactCanvasSize();
-  isPaused = false;
-  pauseBtn.textContent = 'Pause';
-
-  setScreen('game');
-
-  isGameStarted = true; isGameOver = false; inBonusRound = false; bonusFarmer = null;
-  score = 0; timeLeft = 20; targets = []; tomatoes = []; popups = []; splats = [];
-  comboCount = 0; lastHitTime = 0; bestStreak = 0;
-
-  scoreDisplay.innerText = `Score: ${score}`;
-  timerDisplay.innerText = `Time: ${timeLeft}`;
-
-  // Disable exit during countdown
-  exitBtn.disabled = true;
-
-  showCountdown(() => {
-    beginMainTimer();
-    exitBtn.disabled = false; // enable after countdown completes
-    update();                 // start RAF loop
-  });
+/* Sticky header with very visible red-outlined X */
+.panel-header {
+  position: sticky; top: 0; z-index: 2;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 18px 20px 12px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
 }
-function beginMainTimer() {
-  gameInterval = setInterval(() => {
-    if (isGameOver || inBonusRound) { clearInterval(gameInterval); gameInterval = null; return; }
-    if (isPaused) return;
+.panel-title { margin:0; font-weight:900; }
 
-    timeLeft -= 1;
-    timerDisplay.innerText = `Time: ${timeLeft}`;
-
-    if (timeLeft <= 0) {
-      clearInterval(gameInterval);
-      gameInterval = null;
-      triggerBonusRound();
-      return;
-    }
-
-    targets.push(new Target(1));
-    if (Math.random() < 0.7) targets.push(new Target(2));
-    if (Math.random() < 0.4) targets.push(new Target(3));
-  }, 1000);
+.close-x {
+  background:#fff;
+  color:#000;                      /* black glyph */
+  border:3px solid #ff2020;        /* bold red outline */
+  font-size:28px; line-height:1;   /* larger, unmistakable */
+  cursor:pointer; padding:6px 16px;
+  border-radius:12px;
+  box-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
-function showCountdown(callback) {
-  const messages = ['Ready...', 'Set...', 'Go!'];
-  let index = 0;
-  countdownActive = true;
-  countdownDiv.style.display = 'block';
-  countdownDiv.innerText = messages[index];
+.close-x:hover { filter:brightness(0.95); }
 
-  countdownTimerId = setInterval(() => {
-    index++;
-    if (index >= messages.length) {
-      clearInterval(countdownTimerId);
-      countdownTimerId = null;
-      countdownActive = false;
-      countdownDiv.style.display = 'none';
-      callback();
-    } else {
-      countdownDiv.innerText = messages[index];
-    }
-  }, 1000);
-}
-function triggerBonusRound() {
-  inBonusRound = true; targets = []; bonusFarmer = new Farmer();
-  showBonusPrompt = true;
-  setTimeout(() => { showBonusPrompt = false; bonusFarmer.active = true; }, 1000);
-}
-function endBonusRound() {
-  inBonusRound = false; bonusFarmer = null; isGameOver = true;
-
-  const dest = highscoreDestinations(score);
-  pendingScore = score;
-  pendingDestinations = dest;
-
-  if (dest.today || dest.alltime) {
-    finalScoreValue.textContent = score.toLocaleString();
-    playerNameInput.value = '';
-    setScreen('nameEntry');
-  } else {
-    finalScoreValue2.textContent = score.toLocaleString();
-    setScreen('toMenuOverlay');
-  }
+/* Scrollable interior area */
+.panel-content {
+  flex: 1 1 auto;
+  overflow-y: auto;                /* <-- scrolling lives here */
+  padding: 16px 20px;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
-/** Stop & Exit helpers **/
-function cleanupGameLoops() {
-  if (animId) { cancelAnimationFrame(animId); animId = null; }
-  if (gameInterval) { clearInterval(gameInterval); gameInterval = null; }
-  if (countdownTimerId) { clearInterval(countdownTimerId); countdownTimerId = null; }
-}
-function exitToMenu() {
-  if (countdownActive) return; // no exit during countdown
-  cleanupGameLoops();
-  isGameOver = false;
-  isGameStarted = false;
-  inBonusRound = false;
-  bonusFarmer = null;
-  setScreen('menu');
+/* Footer */
+.panel-footer {
+  padding: 12px 20px 16px;
+  border-top: 1px solid #eee;
+  display: flex; gap: 8px; justify-content: flex-end;
 }
 
-/*********************
- * INPUT & UI EVENTS
- *********************/
-canvas.addEventListener('click', (e) => {
-  if (cooldown || isGameOver || !isGameStarted) return;
-  const rect = canvas.getBoundingClientRect();
-  const scaleX = LOGICAL_W / rect.width;
-  const scaleY = LOGICAL_H / rect.height;
-  const x = (e.clientX - rect.left) * scaleX;
-  const y = (e.clientY - rect.top)  * scaleY;
-  tomatoes.push(new Tomato(x, y));
-  cooldown = true; setTimeout(() => (cooldown = false), 600);
-});
-pauseBtn.addEventListener('click', () => {
-  if (!isGameStarted || countdownActive) return; // don't pause during countdown
-  isPaused = !isPaused;
-  pauseBtn.textContent = isPaused ? 'Resume' : 'Pause';
-});
-exitBtn.addEventListener('click', () => { exitToMenu(); });
+/* Slider alignment: text | rail */
+.overlay-panel label {
+  display: grid;
+  grid-template-columns: 1fr 260px; /* text | slider */
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+}
+.overlay-panel input[type="range"] { width: 100%; }
 
-// Panels (open as flex so scrolling works)
-settingsBtn.addEventListener('click', () => { settingsPanel.style.display = 'flex'; });
-updateLogBtn.addEventListener('click', () => { updateLogPanel.style.display = 'flex'; });
-// Panels (close)
-function hideSettings() { settingsPanel.style.display = 'none'; }
-function hideUpdateLog() { updateLogPanel.style.display = 'none'; }
-closeSettings.addEventListener('click', hideSettings);
-closeSettingsX.addEventListener('click', hideSettings);
-closeUpdateLog.addEventListener('click', hideUpdateLog);
-closeUpdateLogX.addEventListener('click', hideUpdateLog);
+/* ===== Lists / Scores ===== */
+.score-list {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  margin: 20px 0;
+  min-width: 300px;
+}
+.score-list li {
+  display:flex; justify-content:space-between;
+  padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.25);
+}
+.score-list li:last-child { border-bottom:none; }
 
-// Volume sliders (hooks)
-musicVolumeSlider.addEventListener('input', (e) => { musicVolume = parseFloat(e.target.value); });
-sfxVolumeSlider.addEventListener('input', (e) => { sfxVolume = parseFloat(e.target.value); });
-
-/*********************
- * MENU NAVIGATION UI
- *********************/
-function setScreen(screen) {
-  // hide all overlays
-  mainMenu.classList.remove('active');
-  highscoresScreen.classList.remove('active');
-  nameEntry.classList.remove('active');
-  toMenuOverlay.classList.remove('active');
-
-  // HUD visibility
-  const uiElement = document.getElementById('ui');
-  if (screen === 'game') uiElement.classList.remove('hide'); else uiElement.classList.add('hide');
-
-  switch (screen) {
-    case 'menu':
-      mainMenu.classList.add('active');
-      applyMenuBackground();
-      cleanupGameLoops();          // hard stop
-      countdownActive = false;
-      exitBtn.disabled = false;
-      isGameStarted = false;
-      break;
-    case 'scores':
-      highscoresScreen.classList.add('active'); clearMenuBackground(); break;
-    case 'nameEntry':
-      nameEntry.classList.add('active'); clearMenuBackground(); break;
-    case 'toMenuOverlay':
-      toMenuOverlay.classList.add('active'); clearMenuBackground(); break;
-    case 'game':
-      clearMenuBackground(); break;
-  }
+/* Inputs */
+input[type="text"] {
+  padding: 12px;
+  margin: 10px 0;
+  border: 2px solid #ddd;
+  border-radius: 10px;
+  font-size: 16px;
+  width: 260px;
 }
 
-// Main menu buttons
-playBtn.addEventListener('click', startGame);
-openScoresBtn.addEventListener('click', () => { renderTodayScores(); setScreen('scores'); });
+/* Row util */
+.row { display: flex; gap: 10px; justify-content: center; }
 
-// Score screen buttons
-scoresToMenuBtn.addEventListener('click', () => setScreen('menu'));
-showAllTimeBtn.addEventListener('click', () => { renderAllTimeScores(); setScreen('scores'); });
-
-// Name entry buttons
-saveScoreBtn.addEventListener('click', () => {
-  const name = (playerNameInput.value || 'Player').trim().slice(0, 16);
-  commitScoreWithDestinations(pendingScore, name, pendingDestinations);
-  setScreen('menu');
-});
-cancelSaveBtn.addEventListener('click', () => setScreen('menu'));
-
-// Round-over → Main Menu
-toMenuBtn.addEventListener('click', () => setScreen('menu'));
-
-/*********************
- * HIGHSCORE STORAGE *
- *********************/
-function todayKey() {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `tt_scores_${y}-${m}-${day}`;
-}
-const ALLTIME_KEY = 'tt_alltime_top10';
-
-function loadTodayScores() { try { return JSON.parse(localStorage.getItem(todayKey())) || []; } catch { return []; } }
-function saveTodayScores(arr) { localStorage.setItem(todayKey(), JSON.stringify(arr)); }
-function loadAllTimeList() { try { return JSON.parse(localStorage.getItem(ALLTIME_KEY)) || []; } catch { return []; } }
-function saveAllTimeList(arr) { localStorage.setItem(ALLTIME_KEY, JSON.stringify(arr)); }
-
-function highscoreDestinations(sc) {
-  const today = loadTodayScores().sort((a,b)=>b.score - a.score);
-  const qualifiesToday = today.length < 10 || sc > (today[9]?.score ?? -Infinity);
-  const all = loadAllTimeList().sort((a,b)=>b.score - a.score);
-  const qualifiesAllTime = all.length < 10 || sc > (all[9]?.score ?? -Infinity);
-  return { today: qualifiesToday, alltime: qualifiesAllTime };
-}
-function commitScoreWithDestinations(sc, name, dest) {
-  const entry = { name, score: sc, date: Date.now() };
-  if (dest.today) {
-    const today = loadTodayScores(); today.push(entry); today.sort((a,b)=>b.score - a.score);
-    saveTodayScores(today.slice(0, 10));
-  }
-  if (dest.alltime) {
-    const all = loadAllTimeList(); all.push(entry); all.sort((a,b)=>b.score - a.score);
-    saveAllTimeList(all.slice(0, 10));
-  }
-}
-function renderTodayScores() {
-  scoresTitle.textContent = '🏆 High Scores (Today)';
-  const list = loadTodayScores().sort((a,b)=>b.score - a.score).slice(0, 10);
-  scoresList.innerHTML = '';
-  if (list.length === 0) {
-    const li = document.createElement('li'); li.innerHTML = `<span>—</span><span>0</span>`;
-    scoresList.appendChild(li); return;
-  }
-  for (const s of list) {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${s.name}</span><span>${s.score.toLocaleString()}</span>`;
-    scoresList.appendChild(li);
-  }
-}
-function renderAllTimeScores() {
-  scoresTitle.textContent = '🏆 Highest Scores (All Time)';
-  const list = loadAllTimeList().sort((a,b)=>b.score - a.score).slice(0, 10);
-  scoresList.innerHTML = '';
-  if (list.length === 0) {
-    const li = document.createElement('li'); li.innerHTML = `<span>—</span><span>0</span>`;
-    scoresList.appendChild(li); return;
-  }
-  for (const s of list) {
-    const li = document.createElement('li');
-    li.innerHTML = `<span>${s.name}</span><span>${s.score.toLocaleString()}</span>`;
-    scoresList.appendChild(li);
-  }
+/* Countdown text */
+#countdown {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 72px;
+  font-weight: 900;
+  color: white;
+  text-shadow: 3px 3px 0px #000;
+  z-index: 1200;
+  display: none;
 }
 
-/*****************
- * INITIAL BOOT *
- *****************/
-setScreen('menu'); // background only (no center image)
-(async function boot(){
-  try { if (playBtn) playBtn.disabled = true; IMGS = await loadImages(ASSETS); }
-  catch(err){ console.warn('[TTT] Asset load issue (using shape fallbacks):', err); }
-  finally { if (playBtn) playBtn.disabled = false; }
-})();
-console.log("[TTT] Game initialized");
+/* Version label (bottom-left) */
+#versionLabel {
+  position: fixed;
+  left: 10px; bottom: 10px;
+  color: rgba(255,255,255,0.98);
+  font-weight: 900;
+  text-shadow: 0 1px 2px rgba(0,0,0,.6);
+  z-index: 3000;
+  pointer-events: none;
+}
