@@ -6,7 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Optional font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <!-- Main stylesheet -->
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -36,7 +35,7 @@
     <!-- Final Score badge (compat container) -->
     <div id="finalScore"></div>
 
-    <!-- Main Menu (no center logo) -->
+    <!-- Main Menu -->
     <div id="mainMenu" class="overlay center-stack active">
       <div class="menu-stack">
         <button id="playBtn" class="primary">Play</button>
@@ -99,9 +98,8 @@
         <button id="closeUpdateLogX" class="close-x" title="Close">×</button>
       </div>
       <div class="panel-content" id="updateLogContent">
-        <p><strong>v.1.2.0</strong> – Fixed buttons & title art; bold red “×”; scrollable panels; lowered menu buttons; stable 3:1 canvas.</p>
-        <p><strong>v.1.1.x</strong> – Various UI improvements.</p>
-        <!-- Add more history; this area scrolls -->
+        <p><strong>v.1.2.2</strong> – Fixed black-screen + dead-buttons by hardening init, corrected z-index, ensured menu art loads first, scrollable panels.</p>
+        <p><strong>v.1.2.0</strong> – Big red-outlined ×; menu buttons lower; 3:1 canvas; exit locked during countdown.</p>
       </div>
       <div class="panel-footer">
         <button id="closeUpdateLog">Close</button>
@@ -109,9 +107,10 @@
     </div>
 
     <!-- Version Number (bottom-left) -->
-    <div id="versionLabel">v.1.2.0</div>
+    <div id="versionLabel">v.1.2.2</div>
   </div>
 
-  <script src="script.js" defer></script>
+  <!-- Put script at the very end and DO NOT use async (ensures DOM exists) -->
+  <script src="script.js"></script>
 </body>
 </html>
