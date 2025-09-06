@@ -12,10 +12,11 @@ const ASSETS = {
   targetRed:   "https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/main/1000025397-removebg-preview.png",
 };
 
-/** ====== Safe DOM helpers ====== */
+/** ====== Helper DOM & safe listeners ====== */
 const $ = (id) => document.getElementById(id);
+const on = (el, ev, fn) => { if (el) el.addEventListener(ev, fn); };
 
-/** ====== DOM refs (guarded) ====== */
+/** ====== DOM refs ====== */
 const canvas = $('gameCanvas'), ctx = canvas.getContext('2d');
 
 const timerDisplay = $('timer');
@@ -55,9 +56,6 @@ const closeUpdateLogX = $('closeUpdateLogX');
 const musicVolumeSlider = $('musicVolume');
 const sfxVolumeSlider = $('sfxVolume');
 
-/** ====== Robust attach (prevents dead-buttons if one ref is null) ====== */
-function on(el, ev, fn) { if (el) el.addEventListener(ev, fn); }
-
 /** ====== Preload images (tolerant) ====== */
 let IMGS = null;
 function loadImages(manifest) {
@@ -96,17 +94,13 @@ function applyMenuBackground() {
   mainMenu.style.backgroundRepeat = 'no-repeat';
   mainMenu.style.backgroundPosition = 'center center';
 }
-function clearMenuBackground() {
-  if (!mainMenu) return;
-  mainMenu.style.backgroundImage = '';
-}
+function clearMenuBackground() { if (mainMenu) mainMenu.style.backgroundImage = ''; }
 
 /** ====== Game state ====== */
 let score = 0, timeLeft = 20;
 let cooldown = false, isGameOver = false, isGameStarted = false, isPaused = false;
 
 let targets = [], tomatoes = [], popups = [], splats = [];
-
 let inBonusRound = false, bonusFarmer = null, showBonusPrompt = false;
 
 let animId = null, gameInterval = null;
@@ -118,7 +112,7 @@ let pendingScore = 0, pendingDestinations = { today: false, alltime: false };
 let comboCount = 0, bestStreak = 0, lastHitTime = 0;
 const COMBO_TIMEOUT = 1750;
 
-/** ====== Helpers ====== */
+/** ====== Helpers & spawn ====== */
 const randomInt = (min, max) => Math.floor(Math.random() * (max - min) + min);
 const SPAWN_BAND_LEFT_RATIO = 0.30;
 const SPAWN_BAND_WIDTH_RATIO = 0.40;
@@ -180,7 +174,7 @@ class Tomato {
       const t = targets[i];
       if (t && Math.hypot(this.x - t.x, this.y - t.y) < t.radius + this.r){
         const pts = applyComboAndReturnPoints(t.points, t.x, t.y - 10);
-        score += pts; scoreDisplay.innerText = `Score: ${score.toLocaleString()}`;
+        score += pts; if (scoreDisplay) scoreDisplay.innerText = `Score: ${score.toLocaleString()}`;
         popups.push(new Popup(t.x, t.y - 10, `+${pts}`, '#111'));
         splats.push(new Splat(t.x, t.y - 6, 'tomatoSplat', 44, 1.0));
         targets.splice(i,1); awarded=true; break;
@@ -201,7 +195,7 @@ class Tomato {
         }
         splats.push(new Splat(hb.x+hb.width/2,hb.y,'tomatoSplat',44,1.2));
         bonusFarmer.headHits=(bonusFarmer.headHits||0)+1;
-        scoreDisplay.innerText=`Score: ${score.toLocaleString()}`; awarded=true;
+        if (scoreDisplay) scoreDisplay.innerText=`Score: ${score.toLocaleString()}`; awarded=true;
       } else if (onBody){
         if (!bonusFarmer.bodyHits){
           const pts=applyComboAndReturnPoints(50,fb.x+fb.width/2,fb.y+fb.height/2);
@@ -213,7 +207,7 @@ class Tomato {
         }
         splats.push(new Splat(fb.x+fb.width/2,fb.y+fb.height/2,'tomatoSplat',40,1.1));
         bonusFarmer.bodyHits=(bonusFarmer.bodyHits||0)+1;
-        scoreDisplay.innerText=`Score: ${score.toLocaleString()}`; awarded=true;
+        if (scoreDisplay) scoreDisplay.innerText=`Score: ${score.toLocaleString()}`; awarded=true;
       }
     }
     const idx = tomatoes.indexOf(this); if (idx !== -1) tomatoes.splice(idx,1);
@@ -255,7 +249,8 @@ class Farmer {
     this.width=140; this.height=140; this.x=bandLeft-this.width-40; this.y=180;
     this.t=0; this.phase='enter'; this.phaseTimer=0; this.active=false;
     this.hitbox = { x: this.x + this.width*0.33, y: this.y + 6,  width: this.width*0.34, height: 24 };
-    this.bodyBox = { x: this.x + this.width*0.08, y: this.y + 28, width: this.width*0.84, height: this.height - 36 };
+    /* ✅ Correct property syntax (no strict-mode crash) */
+    this.bodyBox = { x: this.x + this.width * 0.08, y: this.y + 28, width: this.width * 0.84, height: this.height - 36 };
 
     const bandWidth=bandRight-bandLeft, frames=10*60; this.enterSpeedX=bandWidth/frames;
     this.poseX = bandLeft + bandWidth*0.55 - this.width/2; this.poseY = this.y;
@@ -495,7 +490,7 @@ const closeUpdateLogFn = () => { if (updateLogPanel) updateLogPanel.style.displa
 on(closeSettings, 'click', closeSettingsFn);
 on(closeSettingsX,'click', closeSettingsFn);
 on(closeUpdateLog, 'click', closeUpdateLogFn);
-on(closeUpdateLogX,'click', closeUpdateLogFn);
+on(closeUpdateLogX, 'click', closeUpdateLogFn);
 
 // ESC closes topmost panel
 on(window,'keydown', (e)=>{
