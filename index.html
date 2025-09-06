@@ -4,7 +4,6 @@
   <meta charset="utf-8" />
   <title>Throw Throw Tomato</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- Optional font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
@@ -98,8 +97,8 @@
         <button id="closeUpdateLogX" class="close-x" title="Close">×</button>
       </div>
       <div class="panel-content" id="updateLogContent">
-        <p><strong>v.1.2.2</strong> – Fixed black-screen + dead-buttons by hardening init, corrected z-index, ensured menu art loads first, scrollable panels.</p>
-        <p><strong>v.1.2.0</strong> – Big red-outlined ×; menu buttons lower; 3:1 canvas; exit locked during countdown.</p>
+        <p><strong>v.1.2.4</strong> – Fixed strict‑mode crash; buttons live; title art visible; scrollable panels; big red “×”.</p>
+        <p><strong>v.1.2.2</strong> – Hardened init; z-index cleanup; countdown lock for Exit.</p>
       </div>
       <div class="panel-footer">
         <button id="closeUpdateLog">Close</button>
@@ -107,10 +106,10 @@
     </div>
 
     <!-- Version Number (bottom-left) -->
-    <div id="versionLabel">v.1.2.2</div>
+    <div id="versionLabel">v.1.2.4</div>
   </div>
 
-  <!-- Put script at the very end and DO NOT use async (ensures DOM exists) -->
+  <!-- Script at end (reliable DOM), no async/defer -->
   <script src="script.js"></script>
 </body>
 </html>
