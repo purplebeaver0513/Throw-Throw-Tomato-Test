@@ -22,7 +22,7 @@ body {
 /* 3:1 aspect, slightly shorter to avoid vertical stretch feel */
 #gameCanvas {
   display: block;
-  background: #87CEEB;                         /* fallback while assets load */
+  background: #87CEEB; /* fallback while assets load */
   aspect-ratio: 3 / 1;
   width: min(100vw, calc(100vh * 3));
   height: auto;
@@ -35,9 +35,10 @@ body {
   position: absolute;
   top: 20px;
   right: 20px;
-  z-index: 1000;
+  z-index: 1100;
   color: white;
   font-weight: 800;
+  pointer-events: auto;
 }
 #ui.hide { display: none; }
 #ui div {
@@ -63,7 +64,8 @@ body {
 #topButtons {
   position: absolute;
   top: 20px; left: 20px;
-  z-index: 1100;
+  z-index: 1200;
+  pointer-events: auto;
 }
 #topButtons button {
   margin-right: 10px;
@@ -82,10 +84,8 @@ body {
   inset: 0;
   display: none;
   z-index: 900;
-
-  /* Base layer color; we’ll add the image on top via JS inline styles */
-  background: rgba(0, 0, 0, 0.88);
-  background-blend-mode: multiply;
+  background: rgba(0, 0, 0, 0.2); /* light tint only; image sits above */
+  pointer-events: auto;           /* ensure buttons receive clicks */
 }
 .overlay.active { display: flex; }
 .center-stack {
@@ -101,7 +101,7 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: clamp(4vh, 8vh, 12vh); /* lower = further from center (more down) */
+  bottom: clamp(4vh, 8vh, 14vh); /* lower down the screen */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -134,14 +134,15 @@ button:not(.primary) {
   transform: translate(-50%, -50%);
   background: #fff;
   color: #000;
-  padding: 0;                                   /* pad inside sections */
+  padding: 0;
   border-radius: 14px;
-  z-index: 1300;
-  max-height: 80vh;                             /* overall cap */
+  z-index: 1400;                /* above overlays & HUD */
+  max-height: 80vh;
   width: min(92vw, 560px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-  display: none;                                 /* JS toggles to flex */
+  display: none;
   flex-direction: column;
+  pointer-events: auto;
 }
 
 /* Sticky header with very visible red-outlined X */
@@ -158,7 +159,7 @@ button:not(.primary) {
   background:#fff;
   color:#000;                      /* black glyph */
   border:3px solid #ff2020;        /* bold red outline */
-  font-size:28px; line-height:1;   /* larger, unmistakable */
+  font-size:28px; line-height:1;
   cursor:pointer; padding:6px 16px;
   border-radius:12px;
   box-shadow: 0 1px 2px rgba(0,0,0,.25);
@@ -168,7 +169,7 @@ button:not(.primary) {
 /* Scrollable interior area */
 .panel-content {
   flex: 1 1 auto;
-  overflow-y: auto;                /* <-- scrolling lives here */
+  overflow-y: auto;
   padding: 16px 20px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -184,7 +185,7 @@ button:not(.primary) {
 /* Slider alignment: text | rail */
 .overlay-panel label {
   display: grid;
-  grid-template-columns: 1fr 260px; /* text | slider */
+  grid-template-columns: 1fr 260px;
   align-items: center;
   gap: 14px;
   margin: 12px 0;
@@ -227,7 +228,7 @@ input[type="text"] {
   font-weight: 900;
   color: white;
   text-shadow: 3px 3px 0px #000;
-  z-index: 1200;
+  z-index: 1500;
   display: none;
 }
 
