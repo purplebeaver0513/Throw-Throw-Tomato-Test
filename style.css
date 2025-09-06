@@ -38,7 +38,6 @@ body {
   z-index: 1100;
   color: white;
   font-weight: 800;
-  pointer-events: auto;
 }
 #ui.hide { display: none; }
 #ui div {
@@ -65,7 +64,6 @@ body {
   position: absolute;
   top: 20px; left: 20px;
   z-index: 1200;
-  pointer-events: auto;
 }
 #topButtons button {
   margin-right: 10px;
@@ -84,8 +82,7 @@ body {
   inset: 0;
   display: none;
   z-index: 900;
-  background: rgba(0, 0, 0, 0.2); /* light tint only; image sits above */
-  pointer-events: auto;           /* ensure buttons receive clicks */
+  background: rgba(0, 0, 0, 0.3); /* light tint */
 }
 .overlay.active { display: flex; }
 .center-stack {
@@ -96,12 +93,12 @@ body {
   text-align: center;
 }
 
-/* Move menu buttons further down (responsive) */
+/* Menu buttons placed lower */
 #mainMenu .menu-stack {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: clamp(4vh, 8vh, 14vh); /* lower down the screen */
+  bottom: clamp(4vh, 8vh, 14vh);
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -136,13 +133,12 @@ button:not(.primary) {
   color: #000;
   padding: 0;
   border-radius: 14px;
-  z-index: 1400;                /* above overlays & HUD */
+  z-index: 1400;
   max-height: 80vh;
   width: min(92vw, 560px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.45);
   display: none;
   flex-direction: column;
-  pointer-events: auto;
 }
 
 /* Sticky header with very visible red-outlined X */
