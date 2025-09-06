@@ -1,46 +1,129 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="utf-8" />
   <title>Throw Throw Tomato</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Optional font -->
   <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <!-- Your main stylesheet -->
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Keep title buttons above overlays */
+    #topButtons { z-index: 1000; }
+
+    /* Panel header + highly visible close X (black glyph, bold red outline) */
+    .panel-header {
+      display:flex; align-items:center; justify-content:space-between;
+      margin-bottom:12px;
+    }
+    .close-x {
+      background:#fff;
+      color:#000;                    /* black “×” */
+      border:3px solid #ff3434;      /* bold red outline */
+      font-size:24px; line-height:1;
+      cursor:pointer; padding:4px 12px;
+      border-radius:10px;
+      box-shadow: 0 1px 2px rgba(0,0,0,.25);
+    }
+    .close-x:hover { filter:brightness(0.95); }
+
+    /* Scrollable overlay panels with consistent layout and width */
+    .overlay-panel {
+      max-height: 80vh;
+      overflow: hidden;              /* outer hides; inner scrolls */
+      display: none;                 /* JS toggles to 'flex' when opened */
+      flex-direction: column;        /* header / content / footer */
+      width: min(92vw, 560px);       /* consistent width for slider alignment */
+      z-index: 1100;                 /* above everything else */
+    }
+    .overlay-panel .panel-content {
+      flex: 1 1 auto;
+      overflow-y: auto;
+      padding-right: 8px;            /* space for scrollbar */
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
+      min-height: 0;                 /* ensure child can actually scroll */
+      max-height: calc(80vh - 120px);/* header+footer allowance */
+    }
+    .overlay-panel .panel-footer {
+      margin-top: 12px;
+      display: flex; gap: 8px; justify-content: flex-end;
+    }
+
+    /* Aligned volume sliders (labels and rails start/end together) */
+    .overlay-panel label {
+      display: grid;
+      grid-template-columns: 1fr 260px; /* text | slider rail */
+      align-items: center;
+      gap: 14px;
+      margin: 12px 0;
+    }
+    .overlay-panel input[type="range"] { width: 100%; }
+
+    /* HUD control row */
+    #hudControls {
+      margin-top: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+
+    /* Version label bottom-left, fixed, high z-index, readable */
+    #versionLabel {
+      position: fixed !important;
+      left: 10px !important;
+      right: auto !important;
+      bottom: 10px !important;
+      z-index: 3000 !important;
+      color: rgba(255,255,255,0.98) !important;
+      font-weight: 900 !important;
+      text-shadow: 0 1px 2px rgba(0,0,0,.6) !important;
+      pointer-events: none !important; /* never intercept clicks */
+    }
+
+    /* Move PLAY / HIGH SCORES down so they don't block the hero area */
+    #mainMenu {
+      /* overlay.active already sets display:flex; this just repositions content */
+      justify-content: flex-end;   /* push content toward bottom */
+      align-items: center;
+      padding-bottom: clamp(18vh, 24vh, 260px);
+      gap: 12px;
+    }
+  </style>
 </head>
 <body>
   <div class="game-container">
-    <!-- Top-left buttons -->
+    <!-- Always-visible title buttons -->
     <div id="topButtons">
-      <button id="settingsBtn">⚙ </button>
-      <button id="updateLogBtn">📜 </button>
+      <button id="settingsBtn" title="Settings">⚙️</button>
+      <button id="updateLogBtn" title="Update Log">📜</button>
     </div>
 
     <!-- In-game HUD -->
-    <div id="ui">
+    <div id="ui" class="hide">
       <div id="timer">Time: 20</div>
       <div id="score">Score: 0</div>
-      <button id="pauseBtn" type="button">Pause</button>
+      <div id="hudControls">
+        <button id="pauseBtn" type="button">Pause</button>
+        <button id="exitBtn" type="button" title="Exit to Main Menu">Exit</button>
+      </div>
     </div>
 
-    <!-- Game Canvas -->
+    <!-- Canvas (letterboxed by JS to preserve aspect ratio) -->
     <canvas id="gameCanvas"></canvas>
 
     <!-- Countdown overlay -->
     <div id="countdown"></div>
 
-    <!-- (Legacy) Final Score badge (not used by menus, kept for convenience) -->
+    <!-- Final Score badge (compat container) -->
     <div id="finalScore"></div>
 
-    <!-- ====== MENUS & SCREENS ====== -->
-
-    <!-- Main Menu -->
-    <!-- Main Menu -->
-<div id="mainMenu" class="overlay center-stack active">
-  <img id="titleLogo" alt="Throw Throw Tomato" src="https://raw.githubusercontent.com/purplebeaver0513/Throw-Throw-Tomato-Assets/refs/heads/main/1000025560.png" />
-  <button id="playBtn" class="primary">Play</button>
-  <button id="openScoresBtn">High Scores</button>
-</div>
-
+    <!-- Main Menu (NO center logo/image) -->
+    <div id="mainMenu" class="overlay center-stack active">
+      <button id="playBtn" class="primary">Play</button>
+      <button id="openScoresBtn">High Scores</button>
+    </div>
 
     <!-- High Scores Screen -->
     <div id="highscoresScreen" class="overlay center-stack">
@@ -52,7 +135,7 @@
       </div>
     </div>
 
-    <!-- Name Entry (when you make today's or all-time board) -->
+    <!-- Name Entry -->
     <div id="nameEntry" class="overlay center-stack">
       <h2>🎉 New High Score!</h2>
       <div class="big-score">Your Score: <span id="finalScoreValue">0</span></div>
@@ -64,7 +147,7 @@
       </div>
     </div>
 
-    <!-- Not on board → Main Menu button -->
+    <!-- Round Over -->
     <div id="toMenuOverlay" class="overlay center-stack">
       <h2>Round Over</h2>
       <div class="big-score">Final Score: <span id="finalScoreValue2">0</span></div>
@@ -72,39 +155,44 @@
     </div>
 
     <!-- Settings Panel -->
-    <div id="settingsPanel" class="overlay-panel">
-      <h2>Settings</h2>
-      <label>Music Volume
-        <input id="musicVolume" type="range" min="0" max="1" step="0.01" value="1">
-      </label>
-      <label>Sound Effects Volume
-        <input id="sfxVolume" type="range" min="0" max="1" step="0.01" value="1">
-      </label>
-      <button id="closeSettings">Close</button>
+    <div id="settingsPanel" class="overlay-panel" style="display:none;">
+      <div class="panel-header">
+        <h2 style="margin:0;">Settings</h2>
+        <button id="closeSettingsX" class="close-x" title="Close">×</button>
+      </div>
+      <div class="panel-content">
+        <label>Music Volume
+          <input id="musicVolume" type="range" min="0" max="1" step="0.01" value="1">
+        </label>
+        <label>Sound Effects Volume
+          <input id="sfxVolume" type="range" min="0" max="1" step="0.01" value="1">
+        </label>
+      </div>
+      <div class="panel-footer">
+        <button id="closeSettings">Close</button>
+      </div>
     </div>
 
     <!-- Update Log Panel -->
-    <div id="updateLogPanel" class="overlay-panel">
-      <h2>Update Log</h2>
-      <div id="updateLogContent">
-        <p><strong>v1.0.3</strong> – Added most of the visual assets to the game, fixed minor bugs, updated visual assets. </p>
-        <p><strong>v1.0.2</strong> – Added combo bar, added almost all of the visual assets even though none are being used right now. </p>
-        <p><strong>v1.0.1</strong> – Settings (music/SFX), Update Log, daily & all-time Top 10, bonus round prompt, moving targets spawn from left side, target popups, name entry flow.</p>
-        <p><strong>v1.0.0</strong> – Initial release: targets (3 tiers), tomatoes from center, bonus farmer with multipliers, green spawn band.</p>
+    <div id="updateLogPanel" class="overlay-panel" style="display:none;">
+      <div class="panel-header">
+        <h2 style="margin:0;">Update Log</h2>
+        <button id="closeUpdateLogX" class="close-x" title="Close">×</button>
       </div>
-      <button id="closeUpdateLog">Close</button>
+      <div class="panel-content" id="updateLogContent">
+        <p><strong>v.1.0.10</strong> – Buttons moved down; visible red-outlined “×”; scrollable panels; aligned sliders; letterboxed gameplay; no start logo.</p>
+        <p><strong>v.1.0.9</strong> – Version visible bottom-left.</p>
+        <p><strong>v.1.0.8</strong> – Exit disabled during countdown; removed Stop.</p>
+      </div>
+      <div class="panel-footer">
+        <button id="closeUpdateLog">Close</button>
+      </div>
     </div>
 
-    <!-- Version Number -->
-    <div id="versionLabel">v1.0.3</div>
+    <!-- Version Number (bottom-left) -->
+    <div id="versionLabel">v.1.0.10</div>
   </div>
 
-  <script src="game.js"></script>
+  <script src="script.js" defer></script>
 </body>
 </html>
-
-
-
-
-
-
