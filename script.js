@@ -453,7 +453,7 @@ function update() {
   ctx.clearRect(0, 0, LOGICAL_W, LOGICAL_H);
   drawBackground();
 
-  // spawn band guide
+  // visual spawn band
   const bandX = SPAWN_AREA_X(), bandW = SPAWN_AREA_W();
   ctx.fillStyle = 'rgba(0, 255, 0, 0.10)'; ctx.fillRect(bandX, 0, bandW, LOGICAL_H);
   ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
@@ -735,7 +735,7 @@ function commitScoreWithDestinations(sc, name, dest) {
     saveTodayScores(today.slice(0, 10));
   }
   if (dest.alltime) {
-    const all = loadAllTimeList(); all.push(entry); all.sort((a,b)=>b.score - a score);
+    const all = loadAllTimeList(); all.push(entry); all.sort((a,b)=>b.score - a.score);
     saveAllTimeList(all.slice(0, 10));
   }
 }
