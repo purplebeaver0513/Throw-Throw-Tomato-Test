@@ -98,7 +98,7 @@ body {
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
-  bottom: clamp(12vh, 18vh, 24vh); /* lower = further from center */
+  bottom: clamp(4vh, 8vh, 12vh); /* lower = further from center (more down) */
   display: flex;
   flex-direction: column;
   gap: 12px;
