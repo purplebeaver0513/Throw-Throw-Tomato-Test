@@ -14,20 +14,19 @@ body {
   height: 100vh;
   overflow: hidden;
 
-  /* Center the canvas; overlays are absolute on top */
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
-/* Keep the canvas at 3:1 aspect ratio (no vertical stretch) */
+/* Keep the canvas at 3:1 aspect ratio (a bit shorter to avoid vertical stretch) */
 #gameCanvas {
   display: block;
-  background: #87CEEB;             /* fallback while assets load */
+  background: #87CEEB;                         /* fallback while assets load */
   aspect-ratio: 3 / 1;
   width: min(100vw, calc(100vh * 3));
   height: auto;
-  max-height: 100vh;
+  max-height: 90vh;                             /* ↓ a little shorter */
   max-width: 100vw;
 }
 
@@ -40,14 +39,12 @@ body {
   color: white;
   font-weight: 800;
 }
-
 #ui.hide { display: none; }
-
 #ui div {
   margin-bottom: 10px;
   background: rgba(0, 0, 0, 0.7);
   padding: 8px 12px;
-  border-radius: 5px;
+  border-radius: 6px;
 }
 
 #hudControls {
@@ -56,37 +53,32 @@ body {
   gap: 8px;
   justify-content: flex-end;
 }
-
-#pauseBtn,
-#exitBtn {
+#pauseBtn, #exitBtn {
   padding: 8px 16px;
   background: #ff6b6b;
   color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
 }
-#pauseBtn[disabled],
-#exitBtn[disabled] { opacity: 0.6; cursor: not-allowed; }
+#pauseBtn[disabled], #exitBtn[disabled] { opacity: 0.6; cursor: not-allowed; }
 
 /* ===== Always-visible title buttons ===== */
 #topButtons {
   position: absolute;
-  top: 20px;
-  left: 20px;
+  top: 20px; left: 20px;
   z-index: 1100;
 }
-
 #topButtons button {
   margin-right: 10px;
   padding: 10px 12px;
   font-size: 16px;
   background: rgba(255, 255, 255, 0.95);
   border: 2px solid rgba(0,0,0,0.08);
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 /* ===== Overlays ===== */
@@ -97,11 +89,7 @@ body {
   display: none;
   z-index: 900;
 }
-
-/* Show overlay when active */
 .overlay.active { display: flex; }
-
-/* Vertical stack content */
 .center-stack {
   flex-direction: column;
   justify-content: center;
@@ -110,9 +98,9 @@ body {
   text-align: center;
 }
 
-/* Move the menu buttons down the screen (not in the middle) */
+/* Move the menu buttons lower (responsive) */
 #mainMenu .menu-stack {
-  margin-top: 30vh;               /* push buttons lower */
+  margin-top: clamp(22vh, 32vh, 38vh);          /* further down, but responsive */
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -124,19 +112,14 @@ button {
   padding: 12px 24px;
   margin: 6px;
   font-size: 16px;
-  font-weight: 800;
+  font-weight: 900;
   border: none;
-  border-radius: 10px;
+  border-radius: 12px;
   cursor: pointer;
   transition: transform 0.15s;
 }
-
 button:hover { transform: translateY(-2px); }
-
-.primary {
-  background: #ff6b6b;
-  color: white;
-}
+.primary { background: #ff6b6b; color: white; }
 button:not(.primary) {
   background: rgba(255, 255, 255, 0.12);
   color: white;
@@ -150,22 +133,23 @@ button:not(.primary) {
   transform: translate(-50%, -50%);
   background: #fff;
   color: #000;
-  padding: 24px;
-  border-radius: 12px;
+  padding: 0;                                   /* we'll pad inside sections */
+  border-radius: 14px;
   z-index: 1300;
   max-height: 80vh;
   width: min(92vw, 560px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.45);
-  display: none;                  /* JS will set to flex */
+  display: none;                                 /* JS will set to flex */
   flex-direction: column;
 }
 
-/* Header with visible close button */
+/* Sticky header for always-visible close button */
 .panel-header {
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:12px;
+  position: sticky; top: 0; z-index: 2;
+  display:flex; align-items:center; justify-content:space-between;
+  padding: 18px 20px 12px;
+  background: #fff;
+  border-bottom: 1px solid #eee;
 }
 .panel-title { margin:0; font-weight:900; }
 
@@ -173,9 +157,9 @@ button:not(.primary) {
 .close-x {
   background:#fff;
   color:#000;
-  border:3px solid #ff3434;
+  border:3px solid #ff3434;                      /* bold red outline */
   font-size:22px; line-height:1;
-  cursor:pointer; padding:4px 12px;
+  cursor:pointer; padding:6px 14px;
   border-radius:10px;
   box-shadow: 0 1px 2px rgba(0,0,0,.25);
 }
@@ -185,44 +169,39 @@ button:not(.primary) {
 .panel-content {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding-right: 8px;
+  padding: 16px 20px;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
 }
 
 /* Footer */
 .panel-footer {
-  margin-top: 12px;
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  padding: 12px 20px 16px;
+  border-top: 1px solid #eee;
+  display: flex; gap: 8px; justify-content: flex-end;
 }
 
 /* Slider alignment: text | rail */
 .overlay-panel label {
   display: grid;
-  grid-template-columns: 1fr 260px;
+  grid-template-columns: 1fr 260px;             /* text | slider rail */
   align-items: center;
   gap: 14px;
   margin: 12px 0;
 }
-.overlay-panel input[type="range"] {
-  width: 100%;
-}
+.overlay-panel input[type="range"] { width: 100%; }
 
 /* ===== Lists / Scores ===== */
 .score-list {
   background: rgba(255, 255, 255, 0.12);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 20px;
   margin: 20px 0;
   min-width: 300px;
 }
 .score-list li {
-  display:flex;
-  justify-content:space-between;
-  padding:8px 0;
-  border-bottom:1px solid rgba(255,255,255,0.25);
+  display:flex; justify-content:space-between;
+  padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.25);
 }
 .score-list li:last-child { border-bottom:none; }
 
@@ -231,9 +210,9 @@ input[type="text"] {
   padding: 12px;
   margin: 10px 0;
   border: 2px solid #ddd;
-  border-radius: 8px;
+  border-radius: 10px;
   font-size: 16px;
-  width: 240px;
+  width: 260px;
 }
 
 /* Row util */
