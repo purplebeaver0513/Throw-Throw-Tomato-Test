@@ -352,7 +352,7 @@ function update(){
     if (showBonusPrompt){
       ctx.save();
       ctx.font='900 64px Nunito, sans-serif'; ctx.fillStyle='#1f2937'; ctx.textAlign='center';
-      ctx.fillText('THROW AT THE FARMER', LOGICAL_W/2, LOGICAL_H/2-40);
+      ctx.fillText('SHOOT THE FARMER', LOGICAL_W/2, LOGICAL_H/2-40);
       ctx.restore();
     }
   } else {
